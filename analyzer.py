@@ -12,7 +12,7 @@ def analyze_complexity(code: str) -> dict:
     for i, line in enumerate(lines):
         if re.search(r'\bfor\b|\bwhile\b', line):
             loop_count += 1
-            # Nested loop check — agली line mein bhi loop hai?
+            # Nested loop check — agli line mein bhi loop hai?
             if i + 1 < len(lines):
                 if re.search(r'\bfor\b|\bwhile\b', lines[i+1]):
                     has_nested_loop = True
