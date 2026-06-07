@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from analyzer import analyze_complexity
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 app = FastAPI()
 
@@ -11,6 +13,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Static files serve karo
+app.mount("/static", StaticFiles(directory="."), name="static")
+
+@app.get("/app")
+def serve_frontend() -> FileResponse:
+    return FileResponse("index.html")
 
 class CodeInput(BaseModel):
     code: str
