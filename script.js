@@ -29,7 +29,7 @@
 
     setLoading(true);
 
-    fetch('http://127.0.0.1:8000/analyze', {
+    fetch('https://code-complexity-analyzer-lcz1.onrender.com/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: code, language: 'python' })
