@@ -28,8 +28,8 @@ class CodeInput(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
 @app.get("/")
-def home() -> dict:
-    return {"message": "Code Complexity Analyzer working!"}
+def serve_frontend() -> FileResponse:
+    return FileResponse("index.html")
 
 @app.post("/analyze")
 def analyze_code(input: CodeInput) -> dict:
