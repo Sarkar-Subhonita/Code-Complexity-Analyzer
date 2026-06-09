@@ -192,9 +192,11 @@
 
     // Code example
     if (data.code_example) {
+      lastCodeExample = data.code_example;
       html += '<div class="results__code">';
       html += '  <div class="results__code-label">Optimized Example</div>';
       html += '  <pre>' + escapeHtml(data.code_example) + '</pre>';
+      html += '  <button onclick="copyCode()">Copy Code</button>';
       html += '</div>';
     }
 
@@ -231,3 +233,10 @@
     return div.innerHTML;
   }
 })();
+
+/* ── Copy code to clipboard ─────────────────────────────────────────── */
+let lastCodeExample = '';
+function copyCode() {
+    navigator.clipboard.writeText(lastCodeExample);
+    alert("Code copied! ✅");
+}
