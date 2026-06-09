@@ -629,6 +629,314 @@ body {
 }
 
 
+
+
+/* --------------------------------------------------------------------------
+   7b. Complexity Meter
+   -------------------------------------------------------------------------- */
+
+/* ── Meter container ───────────────────────────────────────────────── */
+.complexity-meter {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--clr-glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  margin-bottom: var(--sp-4);
+  position: relative;
+  overflow: visible;
+  animation: resultFadeIn 0.6s var(--ease-out-expo) 0.15s both;
+}
+
+/* Glassmorphism inner shine */
+.complexity-meter::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ── Meter header row ──────────────────────────────────────────────── */
+.complexity-meter__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.complexity-meter__title {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Complexity label + badge row ──────────────────────────────────── */
+.complexity-meter__label-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.complexity-meter__big-o {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-extrabold);
+  color: var(--clr-text-heading);
+  line-height: 1.1;
+  transition: color 0.4s var(--ease-out-quad);
+}
+
+/* ── Badge ─────────────────────────────────────────────────────────── */
+.complexity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  transition:
+    background  0.3s var(--ease-out-quad),
+    border-color 0.3s var(--ease-out-quad),
+    transform   0.2s var(--ease-out-quad);
+}
+
+.complexity-badge:hover {
+  transform: scale(1.06);
+}
+
+.complexity-badge--efficient {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.30);
+  color: #34d399;
+}
+
+.complexity-badge--moderate {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.30);
+  color: #fbbf24;
+}
+
+.complexity-badge--costly {
+  background: rgba(251, 146, 60, 0.12);
+  border-color: rgba(251, 146, 60, 0.30);
+  color: #fb923c;
+}
+
+.complexity-badge--expensive {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.30);
+  color: #f87171;
+}
+
+/* ── Progress bar track ────────────────────────────────────────────── */
+.complexity-meter__track {
+  width: 100%;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Progress bar fill ─────────────────────────────────────────────── */
+.complexity-meter__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: var(--radius-full);
+  position: relative;
+  transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Animated shimmer on the fill */
+.complexity-meter__fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: meterShimmer 2s linear infinite;
+  border-radius: inherit;
+}
+
+@keyframes meterShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Glow effect behind the track ──────────────────────────────────── */
+.complexity-meter__glow-wrap {
+  position: relative;
+}
+
+.complexity-meter__glow {
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  height: 20px;
+  width: 0%;
+  border-radius: var(--radius-full);
+  filter: blur(12px);
+  opacity: 0;
+  transition:
+    width   1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.6s var(--ease-out-quad);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.complexity-meter__glow.is-visible {
+  opacity: 0.5;
+}
+
+/* ── Meter footer: efficiency status ───────────────────────────────── */
+.complexity-meter__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--sp-3);
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.complexity-meter__status {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.03em;
+  transition: color 0.3s var(--ease-out-quad);
+}
+
+.complexity-meter__percent {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--clr-text-dim);
+  font-family: var(--ff-mono);
+}
+
+/* ── Tooltip ───────────────────────────────────────────────────────── */
+.complexity-meter__tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+.complexity-meter__tooltip-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  color: var(--clr-text-muted);
+  transition:
+    background  0.2s var(--ease-out-quad),
+    border-color 0.2s var(--ease-out-quad);
+  flex-shrink: 0;
+}
+
+.complexity-meter__tooltip-wrap:hover .complexity-meter__tooltip-icon {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.complexity-meter__tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: -8px;
+  width: 260px;
+  padding: var(--sp-3) var(--sp-4);
+  background: rgba(20, 24, 44, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-regular);
+  color: var(--clr-text);
+  line-height: 1.55;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition:
+    opacity    0.25s var(--ease-out-quad),
+    visibility 0.25s var(--ease-out-quad),
+    transform  0.25s var(--ease-out-quad);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Tooltip arrow */
+.complexity-meter__tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 14px;
+  border: 6px solid transparent;
+  border-top-color: rgba(20, 24, 44, 0.95);
+}
+
+.complexity-meter__tooltip-wrap:hover .complexity-meter__tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* ── Color classes for fill + glow ─────────────────────────────────── */
+.meter-color--green       { background: linear-gradient(90deg, #22c55e, #34d399); }
+.meter-color--lightgreen  { background: linear-gradient(90deg, #4ade80, #86efac); }
+.meter-color--yellowgreen { background: linear-gradient(90deg, #84cc16, #a3e635); }
+.meter-color--yellow      { background: linear-gradient(90deg, #eab308, #fbbf24); }
+.meter-color--orange      { background: linear-gradient(90deg, #f97316, #fb923c); }
+.meter-color--darkorange  { background: linear-gradient(90deg, #ea580c, #f97316); }
+.meter-color--red         { background: linear-gradient(90deg, #ef4444, #f87171); }
+.meter-color--darkred     { background: linear-gradient(90deg, #b91c1c, #dc2626); }
+
+.meter-glow--green       { background: #34d399; }
+.meter-glow--lightgreen  { background: #86efac; }
+.meter-glow--yellowgreen { background: #a3e635; }
+.meter-glow--yellow      { background: #fbbf24; }
+.meter-glow--orange      { background: #fb923c; }
+.meter-glow--darkorange  { background: #f97316; }
+.meter-glow--red         { background: #f87171; }
+.meter-glow--darkred     { background: #dc2626; }
+
+.meter-text--green       { color: #34d399; }
+.meter-text--lightgreen  { color: #86efac; }
+.meter-text--yellowgreen { color: #a3e635; }
+.meter-text--yellow      { color: #fbbf24; }
+.meter-text--orange      { color: #fb923c; }
+.meter-text--darkorange  { color: #f97316; }
+.meter-text--red         { color: #f87171; }
+.meter-text--darkred     { color: #dc2626; }
+
+
 /* --------------------------------------------------------------------------
    8. Custom Scrollbar (Global)
    -------------------------------------------------------------------------- */
@@ -703,6 +1011,11 @@ body {
   .bg-orb--1 { width: 300px; height: 300px; }
   .bg-orb--2 { width: 250px; height: 250px; }
   .bg-orb--3 { width: 200px; height: 200px; }
+
+  .complexity-meter__tooltip {
+    width: 220px;
+    right: -4px;
+  }
 }
 
 /* ── Phones (≤ 480px) ──────────────────────────────────────────────── */
@@ -749,4 +1062,22 @@ body {
   }
 
   .bg-orb { display: none; }
+
+  .complexity-meter__big-o {
+    font-size: var(--fs-lg);
+  }
+
+  .complexity-meter__label-row {
+    gap: var(--sp-2);
+  }
+
+  .complexity-meter__tooltip {
+    width: 200px;
+    right: -4px;
+  }
+
+  .complexity-meter__footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

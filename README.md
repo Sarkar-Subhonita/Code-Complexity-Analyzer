@@ -10,6 +10,8 @@ explains it in simple language, and suggests how to optimize it.
 - Time complexity detection (O(1), O(n), O(n²), O(log n))
 - Plain English explanation
 - Optimization suggestions with code examples
+- Space complexity detection
+- Loop count
 
 ## 🛠️ Tech Stack
 - **Backend:** Python, FastAPI
