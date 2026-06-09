@@ -74,7 +74,7 @@
 
     html += buildMetric('Time Complexity', data.time_complexity || '—', 'time');
     html += buildMetric('Space Complexity', data.space_complexity || '—', 'space');
-    html += buildMetric('Loops', data.num_loops !== undefined ? data.num_loops : '—', 'loops');
+    html += buildMetric('Loops', data.loops_found !== undefined ? data.loops_found : '—', 'loops');
     html += buildMetric('Functions', data.num_functions !== undefined ? data.num_functions : '—', 'funcs');
 
     html += '</div>';

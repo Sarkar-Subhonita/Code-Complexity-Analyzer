@@ -40,5 +40,7 @@ def analyze_code(input: CodeInput) -> dict:
         "explanation": result["explanation"],
         "suggestion": result["suggestion"],
         "code_example": result["code_example"],
-        "details": result["details"]
+        "details": result["details"],
+        "space_complexity": result["space_complexity"],
+        "loops_found": result["loops_found"],
     }

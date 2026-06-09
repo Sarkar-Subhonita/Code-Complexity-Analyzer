@@ -7,7 +7,10 @@ def analyze_complexity(code: str) -> dict:
     has_recursion = False
     has_binary_search = False
     has_nested_loop = False
-    
+    has_list = 'append' in code or '=[]' in code
+    has_dict = '{}' in code or 'dict' in code
+    has_2d = '[[' in code
+
     # Loops count karo
     for i, line in enumerate(lines):
         if re.search(r'\bfor\b|\bwhile\b', line):
@@ -140,11 +143,20 @@ return index < len(arr) and arr[index] == target"""
         suggestion = "Itne nested loops ko reduce karne ki koshish karo — HashMap ya sorting use karke."
         code_example = "# Apne specific use case ke hisaab se restructure karo."
 
+    # Space complexity decide karo
+    if has_2d:
+        space_complexity = "O(n²)"
+    elif has_list or has_dict:
+        space_complexity = "O(n)"
+    else:
+        space_complexity = "O(1)"
     return {
         "time_complexity": time_complexity,
         "explanation": explanation,
         "suggestion": suggestion,
         "code_example": code_example,
+        "space_complexity": space_complexity,
+        "loops_found": loop_count,
         "details": {
             "loops_found": loop_count,
             "recursion_detected": has_recursion,
