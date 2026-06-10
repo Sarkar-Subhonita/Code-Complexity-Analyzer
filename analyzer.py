@@ -10,6 +10,7 @@ def analyze_complexity(code: str) -> dict:
     has_list = 'append' in code or '=[]' in code
     has_dict = '{}' in code or 'dict' in code
     has_2d = '[[' in code
+    problematic_lines = []
 
     # Loops count karo
     for i, line in enumerate(lines):
@@ -19,7 +20,9 @@ def analyze_complexity(code: str) -> dict:
             if i + 1 < len(lines):
                 if re.search(r'\bfor\b|\bwhile\b', lines[i+1]):
                     has_nested_loop = True
-    
+                    problematic_lines.append(i + 1)
+                    problematic_lines.append(i + 2)
+
     # Recursion check
     func_match = re.search(r'def\s+(\w+)', code)
     if func_match:
@@ -157,6 +160,7 @@ return index < len(arr) and arr[index] == target"""
         "code_example": code_example,
         "space_complexity": space_complexity,
         "loops_found": loop_count,
+        "problematic_lines": problematic_lines,
         "details": {
             "loops_found": loop_count,
             "recursion_detected": has_recursion,

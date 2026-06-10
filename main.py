@@ -43,4 +43,5 @@ def analyze_code(input: CodeInput) -> dict:
         "details": result["details"],
         "space_complexity": result["space_complexity"],
         "loops_found": result["loops_found"],
+        "problematic_lines": result["problematic_lines"]
     }

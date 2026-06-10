@@ -38,6 +38,7 @@
       .then(function (data) {
         setLoading(false);
         renderResults(data);
+        saveToHistory(codeInput.value, data.time_complexity);
       })
       .catch(function (error) {
         setLoading(false);
@@ -190,6 +191,24 @@
       html += '</div>';
     }
 
+    //problematic lines
+    // Line highlight
+    if (data.problematic_lines && data.problematic_lines.length > 0) {
+      let codeLines = codeInput.value.split('\n');
+      let highlightHtml = '<div class="code-highlight">';
+      highlightHtml += '<div class="code-highlight__label">⚠️ Problematic Lines</div>';
+      codeLines.forEach(function(line, index) {
+          let lineNum = index + 1;
+          let isProblematic = data.problematic_lines.includes(lineNum);
+          highlightHtml += '<div class="code-highlight__line' + (isProblematic ? ' code-highlight__line--bad' : '') + '">';
+          highlightHtml += '<span class="code-highlight__num">' + lineNum + '</span>';
+          highlightHtml += '<span class="code-highlight__code">' + escapeHtml(line) + '</span>';
+          highlightHtml += '</div>';
+      });
+      highlightHtml += '</div>';
+      html += highlightHtml;
+  }
+
     // Code example
     if (data.code_example) {
       lastCodeExample = data.code_example;
@@ -205,6 +224,7 @@
 
     // Trigger meter animation after DOM insertion
     animateMeterFill();
+    renderHistory();
   }
 
   /* ── Build a single metric card ────────────────────────────────────── */
@@ -240,3 +260,42 @@ function copyCode() {
     navigator.clipboard.writeText(lastCodeExample);
     alert("Code copied! ✅");
 }
+
+function loadFromHistory(code) {
+    document.getElementById('code-input').value = code;
+    var lines = code === '' ? 0 : code.split('\n').length;
+    document.getElementById('line-count').textContent = lines + (lines === 1 ? ' line' : ' lines');
+    document.getElementById('code-input').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ── analysis history ─────────────────────────────────────────── */
+function saveToHistory(code, complexity) {
+    let history = JSON.parse(localStorage.getItem("analysisHistory") || "[]");
+    history.unshift({
+        code: code.substring(0, 50) + "...",
+        complexity: complexity,
+        time: new Date().toLocaleTimeString()
+    });
+    if (history.length > 5) history.pop();
+    localStorage.setItem("analysisHistory", JSON.stringify(history));
+}
+
+function renderHistory() {
+    let history = JSON.parse(localStorage.getItem("analysisHistory") || "[]");
+    if (history.length === 0) return;
+    
+    let html = '<div class="history__card">';
+    html += '<h3>Recent Analyses</h3>';
+    history.forEach(function(item) {
+    html += '<div class="history__item" onclick="loadFromHistory(\'' + item.code.replace(/'/g, "\\'") + '\')" style="cursor:pointer">';
+    html += '<span class="history__complexity">' + item.complexity + '</span>';
+    html += '<span class="history__code">' + item.code + '</span>';
+    html += '<span class="history__time">' + item.time + '</span>';
+    html += '</div>';
+  });
+    html += '</div>';
+    
+    document.getElementById("history").innerHTML = html;
+}
+
+renderHistory();

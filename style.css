@@ -1018,7 +1018,7 @@ body {
   }
 }
 
-/* ── Phones (≤ 480px) ──────────────────────────────────────────────── */
+ /*── Phones (≤ 480px) ──────────────────────────────────────────────── */
 @media (max-width: 480px) {
   body {
     padding: var(--sp-3) var(--sp-2);
@@ -1080,4 +1080,36 @@ body {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ── line highlight ──────────────────────────────────────────────── */
+.code-highlight {
+    margin-top: 16px;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: monospace;
+}
+.code-highlight__label {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #a0a0b0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.code-highlight__line {
+    display: flex;
+    gap: 12px;
+    padding: 4px 12px;
+    font-size: 13px;
+}
+.code-highlight__line--bad {
+    background: rgba(255, 80, 80, 0.2);
+    border-left: 3px solid #ff5050;
+}
+.code-highlight__num {
+    color: #666;
+    min-width: 20px;
+}
+.code-highlight__code {
+    color: #e0e0e0;
 }
