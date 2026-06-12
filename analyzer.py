@@ -1,170 +1,222 @@
+import os
+import json
 import re
+import anthropic
 
-def analyze_complexity(code: str) -> dict:
-    lines = code.strip().split('\n')
-    
-    loop_count = 0
-    has_recursion = False
-    has_binary_search = False
-    has_nested_loop = False
-    has_list = 'append' in code or '=[]' in code
-    has_dict = '{}' in code or 'dict' in code
-    has_2d = '[[' in code
-    problematic_lines = []
+# ── Anthropic client ────────────────────────────────────────────────────────
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-    # Loops count karo
-    for i, line in enumerate(lines):
-        if re.search(r'\bfor\b|\bwhile\b', line):
-            loop_count += 1
-            # Nested loop check — agli line mein bhi loop hai?
-            if i + 1 < len(lines):
-                if re.search(r'\bfor\b|\bwhile\b', lines[i+1]):
-                    has_nested_loop = True
-                    problematic_lines.append(i + 1)
-                    problematic_lines.append(i + 2)
+# ── Languages the UI supports ────────────────────────────────────────────────
+SUPPORTED_LANGUAGES = [
+    "JavaScript", "TypeScript", "Python", "Java",
+    "C++", "C", "C#", "Go", "Rust", "Ruby", "PHP", "Kotlin", "Swift"
+]
 
-    # Recursion check
-    func_match = re.search(r'def\s+(\w+)', code)
-    if func_match:
-        func_name = func_match.group(1)
-        if code.count(func_name) > 1:
-            has_recursion = True
-    
-    # Binary search pattern
-    if 'mid' in code and ('left' in code or 'low' in code):
-        has_binary_search = True
+# ── The master prompt ────────────────────────────────────────────────────────
+SYSTEM_PROMPT = """You are an expert computer science professor and code performance analyst.
+Your job is to deeply analyze code and return a complete, structured JSON report.
+You must ALWAYS respond with ONLY valid JSON — no markdown fences, no explanation text outside the JSON.
+Every field described below is required. Never omit a field."""
 
-    # Complexity + explanation + suggestion decide karo
-    if has_binary_search:
-        time_complexity = "O(log n)"
-        explanation = (
-            "Tera code binary search pattern follow kar raha hai. "
-            "Har step mein input half ho jaata hai, isliye O(log n) hai."
+def build_user_prompt(code: str, language: str) -> str:
+    return f"""Analyze this {language} code and return a single JSON object with EXACTLY this structure.
+No text before or after the JSON.
+
+CODE TO ANALYZE:
+```
+{code}
+```
+
+Return this exact JSON structure (fill in all values based on the actual code):
+
+{{
+  "time_complexity": "e.g. O(n²)",
+  "space_complexity": "e.g. O(n)",
+  "complexity_score": <integer 0-100, where 0=best O(1), 100=worst O(n!)>,
+  "complexity_label": "e.g. Moderate",
+  "loops_found": <integer count of loops>,
+  "time_why": "One clear sentence explaining WHY this time complexity — refer to actual code structure",
+  "space_why": "One clear sentence explaining WHY this space complexity — refer to actual variables/structures",
+
+  "code_review": [
+    {{
+      "line": <1-based line number>,
+      "type": "warning" or "error",
+      "message": "Specific explanation of the issue on this line"
+    }}
+  ],
+
+  "heatmap": [
+    {{
+      "line": <1-based line number>,
+      "code": "exact source line text",
+      "complexity": "O(1)" or "O(log n)" or "O(n)" or "O(n log n)" or "O(n²)" or "O(n³)+",
+      "label": "short label e.g. FUNCTION SCOPE, OUTER LOOP, INNER LOOP, CONSTANT, RETURN"
+    }}
+  ],
+
+  "functions_detected": ["functionName()", "anotherFunc()"],
+
+  "complexity_description": "2-3 sentences explaining overall performance characteristics and real-world impact",
+
+  "hints": [
+    "First hint — conceptual nudge, no code",
+    "Second hint — slightly more specific",
+    "Third hint — data structure suggestion",
+    "Fourth hint — almost the answer but still no code"
+  ],
+
+  "optimized_versions": {{
+    "JavaScript": "complete optimized function code as string",
+    "TypeScript": "complete optimized function code as string",
+    "Python": "complete optimized function code as string",
+    "Java": "complete optimized function code as string",
+    "C++": "complete optimized function code as string",
+    "C": "complete optimized function code as string",
+    "C#": "complete optimized function code as string",
+    "Go": "complete optimized function code as string",
+    "Rust": "complete optimized function code as string",
+    "Ruby": "complete optimized function code as string",
+    "PHP": "complete optimized function code as string",
+    "Kotlin": "complete optimized function code as string",
+    "Swift": "complete optimized function code as string"
+  }},
+
+  "optimized_time_complexity": "e.g. O(n)",
+  "optimized_space_complexity": "e.g. O(n)",
+  "optimized_time_why": "Why the optimized version has this time complexity",
+  "optimized_space_why": "Why the optimized version has this space complexity",
+  "optimized_notes": "Any language-agnostic note about the optimization approach",
+  "what_changed": "One sentence: what specifically changed and why it improves performance",
+
+  "pseudocode": "language-agnostic pseudocode of the OPTIMIZED algorithm, use newlines with \\n",
+
+  "flowchart": "Mermaid.js flowchart diagram string of the OPTIMIZED algorithm. Use graph TD syntax."
+}}
+
+Rules:
+- complexity_score: O(1)=5, O(log n)=15, O(n)=35, O(n log n)=55, O(n²)=70, O(n³)=85, O(2^n)=95, O(n!)=100
+- heatmap must include EVERY line of the input code, even blank lines (use empty string for code, "O(1)" for complexity, "" for label)
+- code_review should only include lines that actually have issues; empty array [] is valid if code is clean
+- optimized_versions must have all 13 languages, each a complete working function
+- flowchart: must be valid Mermaid syntax starting with "graph TD"
+- All string values with newlines must use \\n escape sequences"""
+
+
+def analyze_complexity(code: str, language: str = "python") -> dict:
+    """
+    Call Claude API, parse the JSON response, return the full analysis dict.
+    Falls back gracefully if the API call fails.
+    """
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=8000,
+            system=SYSTEM_PROMPT,
+            messages=[
+                {"role": "user", "content": build_user_prompt(code, language)}
+            ]
         )
-        suggestion = "Yeh already optimal hai! Binary search se better nahi ho sakta sorted array ke liye."
-        code_example = """# Tera current approach already optimal hai:
-def binary_search(arr, target):
-    left, right = 0, len(arr) - 1
-    while left <= right:
-        mid = (left + right) // 2
-        if arr[mid] == target:
-            return mid
-        elif arr[mid] < target:
-            left = mid + 1
-        else:
-            right = mid - 1
-    return -1"""
 
-    elif has_nested_loop:
-        time_complexity = "O(n²)"
-        explanation = (
-            "Tera code mein nested loops hain — ek loop ke andar doosra loop. "
-            "Iska matlab n elements ke liye n×n = n² operations honge. "
-            "Jaise 1000 elements pe 10,00,000 operations!"
-        )
-        suggestion = (
-            "Nested loops ko aksar HashMap (dictionary) se O(n) mein convert kar sakte hain. "
-            "Neeche Two Sum ka example dekh:"
-        )
-        code_example = """# Slow way - O(n²) nested loop:
-for i in range(len(arr)):
-    for j in range(i+1, len(arr)):
-        if arr[i] + arr[j] == target:
-            return [i, j]
+        raw = message.content[0].text.strip()
 
-# Fast way - O(n) HashMap use karke:
-seen = {}
-for i, num in enumerate(arr):
-    complement = target - num
-    if complement in seen:
-        return [seen[complement], i]
-    seen[num] = i"""
+        # Strip markdown fences if Claude wrapped the JSON anyway
+        if raw.startswith("```"):
+            raw = re.sub(r'^```[a-z]*\n?', '', raw)
+            raw = re.sub(r'\n?```$', '', raw.strip())
 
-    elif has_recursion and loop_count >= 1:
-        time_complexity = "O(n log n)"
-        explanation = (
-            "Tera code recursion aur loop dono use kar raha hai. "
-            "Yeh Merge Sort ya Quick Sort jaisa pattern hai — O(n log n)."
-        )
-        suggestion = "Yeh already efficient hai sorting ke liye. Agar possible ho toh Python ka built-in sort() use karo — woh bhi O(n log n) hai but internally optimized hai."
-        code_example = """# Python built-in sort — O(n log n) but faster in practice:
-arr.sort()  # In-place
-# ya
-sorted_arr = sorted(arr)  # Naya list"""
+        result = json.loads(raw)
 
-    elif has_recursion:
-        time_complexity = "O(n)"
-        explanation = (
-            "Tera code recursion use kar raha hai — function khud ko call kar raha hai. "
-            "Har call ek element process karta hai, toh O(n) hai."
-        )
-        suggestion = "Recursion stack overflow de sakta hai bade inputs pe. Iterative approach ya tail recursion try karo."
-        code_example = """# Recursion (stack overflow risk bade n pe):
-def factorial(n):
-    if n == 0:
-        return 1
-    return n * factorial(n-1)
+        # ── Validate & fill any missing fields with safe defaults ──────────
+        result.setdefault("time_complexity", "Unknown")
+        result.setdefault("space_complexity", "Unknown")
+        result.setdefault("complexity_score", 50)
+        result.setdefault("complexity_label", "Moderate")
+        result.setdefault("loops_found", 0)
+        result.setdefault("time_why", "")
+        result.setdefault("space_why", "")
+        result.setdefault("code_review", [])
+        result.setdefault("heatmap", [])
+        result.setdefault("functions_detected", [])
+        result.setdefault("complexity_description", "")
+        result.setdefault("hints", ["", "", "", ""])
+        result.setdefault("optimized_versions", {lang: "" for lang in SUPPORTED_LANGUAGES})
+        result.setdefault("optimized_time_complexity", "")
+        result.setdefault("optimized_space_complexity", "")
+        result.setdefault("optimized_time_why", "")
+        result.setdefault("optimized_space_why", "")
+        result.setdefault("optimized_notes", "")
+        result.setdefault("what_changed", "")
+        result.setdefault("pseudocode", "")
+        result.setdefault("flowchart", "")
 
-# Better — Iterative approach:
-def factorial(n):
-    result = 1
-    for i in range(1, n+1):
-        result *= i
-    return result"""
+        # Ensure all 13 languages exist in optimized_versions
+        for lang in SUPPORTED_LANGUAGES:
+            result["optimized_versions"].setdefault(lang, "// Not available")
 
-    elif loop_count == 0:
-        time_complexity = "O(1)"
-        explanation = (
-            "Tera code mein koi loop nahi hai. "
-            "Input kitna bhi bada ho, operations same rehte hain — yeh best possible complexity hai!"
-        )
-        suggestion = "Kuch nahi karna — yeh already optimal hai!"
-        code_example = """# O(1) ka example — direct calculation:
-def get_first(arr):
-    return arr[0]  # Hamesha ek hi operation"""
+        # Keep backward-compat fields so main.py doesn't break
+        result["explanation"] = result.get("time_why", "")
+        result["suggestion"] = result.get("what_changed", "")
+        result["code_example"] = result["optimized_versions"].get("Python", "")
+        result["problematic_lines"] = [
+            r["line"] for r in result.get("code_review", []) if "line" in r
+        ]
+        result["details"] = {
+            "loops_found": result.get("loops_found", 0),
+            "recursion_detected": any(
+                "recurs" in r.get("message", "").lower()
+                for r in result.get("code_review", [])
+            ),
+            "nested_loop_detected": result.get("complexity_score", 0) >= 70,
+            "binary_search_detected": "log" in result.get("time_complexity", "").lower()
+        }
 
-    elif loop_count == 1:
-        time_complexity = "O(n)"
-        explanation = (
-            "Tera code mein ek loop hai jo poore input pe chalta hai. "
-            "1000 elements pe 1000 operations — linear growth."
-        )
-        suggestion = "Agar koi specific element dhundh raha hai toh pehle sort karke binary search use karo — O(log n) ho jaayega."
-        code_example = """# Slow - O(n) linear search:
-for item in arr:
-    if item == target:
-        return True
+        return result
 
-# Fast - O(log n) binary search (sorted array pe):
-import bisect
-index = bisect.bisect_left(arr, target)
-return index < len(arr) and arr[index] == target"""
+    except json.JSONDecodeError as e:
+        return _error_fallback(f"Could not parse AI response as JSON: {str(e)}")
+    except anthropic.APIConnectionError:
+        return _error_fallback("Could not connect to AI service. Check your ANTHROPIC_API_KEY.")
+    except anthropic.RateLimitError:
+        return _error_fallback("Rate limit hit. Please wait a moment and try again.")
+    except Exception as e:
+        return _error_fallback(f"Analysis failed: {str(e)}")
 
-    else:
-        time_complexity = f"O(n^{loop_count})"
-        explanation = f"Tera code mein {loop_count} loops hain. Yeh bahut slow ho sakta hai bade inputs pe."
-        suggestion = "Itne nested loops ko reduce karne ki koshish karo — HashMap ya sorting use karke."
-        code_example = "# Apne specific use case ke hisaab se restructure karo."
 
-    # Space complexity decide karo
-    if has_2d:
-        space_complexity = "O(n²)"
-    elif has_list or has_dict:
-        space_complexity = "O(n)"
-    else:
-        space_complexity = "O(1)"
+def _error_fallback(message: str) -> dict:
+    """Return a safe empty result dict when the API call fails."""
+    empty_versions = {lang: "// Analysis unavailable" for lang in SUPPORTED_LANGUAGES}
     return {
-        "time_complexity": time_complexity,
-        "explanation": explanation,
-        "suggestion": suggestion,
-        "code_example": code_example,
-        "space_complexity": space_complexity,
-        "loops_found": loop_count,
-        "problematic_lines": problematic_lines,
+        "time_complexity": "Error",
+        "space_complexity": "Error",
+        "complexity_score": 0,
+        "complexity_label": "Unknown",
+        "loops_found": 0,
+        "time_why": message,
+        "space_why": "",
+        "code_review": [],
+        "heatmap": [],
+        "functions_detected": [],
+        "complexity_description": message,
+        "hints": [],
+        "optimized_versions": empty_versions,
+        "optimized_time_complexity": "",
+        "optimized_space_complexity": "",
+        "optimized_time_why": "",
+        "optimized_space_why": "",
+        "optimized_notes": "",
+        "what_changed": "",
+        "pseudocode": "",
+        "flowchart": "",
+        # backward-compat
+        "explanation": message,
+        "suggestion": "",
+        "code_example": "",
+        "problematic_lines": [],
         "details": {
-            "loops_found": loop_count,
-            "recursion_detected": has_recursion,
-            "nested_loop_detected": has_nested_loop,
-            "binary_search_detected": has_binary_search
+            "loops_found": 0,
+            "recursion_detected": False,
+            "nested_loop_detected": False,
+            "binary_search_detected": False
         }
     }
