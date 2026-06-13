@@ -5,7 +5,7 @@ import google.generativeai as genai
 
 # ── Gemini client ────────────────────────────────────────────────────────────
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-pro")
 
 # ── Languages the UI supports ────────────────────────────────────────────────
 SUPPORTED_LANGUAGES = [
