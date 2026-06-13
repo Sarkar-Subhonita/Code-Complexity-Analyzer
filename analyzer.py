@@ -104,7 +104,7 @@ def analyze_complexity(code: str, language: str = "python") -> dict:
     """Call Gemini API, parse JSON response, return full analysis dict."""
     try:
         response = client.models.generate_content(
-            model="gemini-1.5-flash-latest",
+            model="models/gemini-1.5-flash-latest",
             contents=build_prompt(code, language),
             config=types.GenerateContentConfig(
                 temperature=0.2,
