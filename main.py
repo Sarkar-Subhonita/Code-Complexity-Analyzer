@@ -14,6 +14,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/style.css")
+def serve_css():
+    return FileResponse("style.css")
+
+@app.get("/script.js")
+def serve_js():
+    return FileResponse("script.js")
+
 # Static files serve karo
 app.mount("/static", StaticFiles(directory="."), name="static")
 
