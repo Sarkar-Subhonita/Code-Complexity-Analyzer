@@ -1,11 +1,11 @@
 import os
 import json
 import re
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 # ── Gemini client ────────────────────────────────────────────────────────────
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-pro")
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # ── Languages the UI supports ────────────────────────────────────────────────
 SUPPORTED_LANGUAGES = [
@@ -103,9 +103,10 @@ Rules:
 def analyze_complexity(code: str, language: str = "python") -> dict:
     """Call Gemini API, parse JSON response, return full analysis dict."""
     try:
-        response = model.generate_content(
-            build_prompt(code, language),
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=build_prompt(code, language),
+            config=types.GenerateContentConfig(
                 temperature=0.2,
                 max_output_tokens=8000,
             )
@@ -155,13 +156,13 @@ def analyze_complexity(code: str, language: str = "python") -> dict:
             r["line"] for r in result.get("code_review", []) if "line" in r
         ]
         result["details"] = {
-            "loops_found":             result.get("loops_found", 0),
-            "recursion_detected":      any(
+            "loops_found":            result.get("loops_found", 0),
+            "recursion_detected":     any(
                 "recurs" in r.get("message", "").lower()
                 for r in result.get("code_review", [])
             ),
-            "nested_loop_detected":    result.get("complexity_score", 0) >= 70,
-            "binary_search_detected":  "log" in result.get("time_complexity", "").lower()
+            "nested_loop_detected":   result.get("complexity_score", 0) >= 70,
+            "binary_search_detected": "log" in result.get("time_complexity", "").lower()
         }
 
         return result
@@ -176,31 +177,31 @@ def _error_fallback(message: str) -> dict:
     """Return a safe empty result dict when the API call fails."""
     empty_versions = {lang: "// Analysis unavailable" for lang in SUPPORTED_LANGUAGES}
     return {
-        "time_complexity":          "Error",
-        "space_complexity":         "Error",
-        "complexity_score":         0,
-        "complexity_label":         "Unknown",
-        "loops_found":              0,
-        "time_why":                 message,
-        "space_why":                "",
-        "code_review":              [],
-        "heatmap":                  [],
-        "functions_detected":       [],
-        "complexity_description":   message,
-        "hints":                    [],
-        "optimized_versions":       empty_versions,
-        "optimized_time_complexity":"",
+        "time_complexity":           "Error",
+        "space_complexity":          "Error",
+        "complexity_score":          0,
+        "complexity_label":          "Unknown",
+        "loops_found":               0,
+        "time_why":                  message,
+        "space_why":                 "",
+        "code_review":               [],
+        "heatmap":                   [],
+        "functions_detected":        [],
+        "complexity_description":    message,
+        "hints":                     [],
+        "optimized_versions":        empty_versions,
+        "optimized_time_complexity": "",
         "optimized_space_complexity":"",
-        "optimized_time_why":       "",
-        "optimized_space_why":      "",
-        "optimized_notes":          "",
-        "what_changed":             "",
-        "pseudocode":               "",
-        "flowchart":                "",
-        "explanation":              message,
-        "suggestion":               "",
-        "code_example":             "",
-        "problematic_lines":        [],
+        "optimized_time_why":        "",
+        "optimized_space_why":       "",
+        "optimized_notes":           "",
+        "what_changed":              "",
+        "pseudocode":                "",
+        "flowchart":                 "",
+        "explanation":               message,
+        "suggestion":                "",
+        "code_example":              "",
+        "problematic_lines":         [],
         "details": {
             "loops_found":            0,
             "recursion_detected":     False,
