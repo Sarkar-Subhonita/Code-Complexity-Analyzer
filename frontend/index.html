@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Analyze the time and space complexity of your code with instant insights, suggestions, and optimized alternatives.">
+  <title>BigO Lab — Measure the Big O of your code</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Mermaid for flowchart rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── History sidebar ─────────────────────────────────────────────── -->
+  <aside class="history-sidebar" id="history-sidebar">
+    <div class="history-sidebar__header">
+      <span class="history-sidebar__title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        History
+      </span>
+      <div class="history-sidebar__actions">
+        <button class="history-sidebar__clear" id="history-clear-btn" title="Clear history">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          Clear
+        </button>
+        <button class="history-sidebar__close" id="history-close-btn" title="Close">✕</button>
+      </div>
+    </div>
+    <div class="history-sidebar__list" id="history-list">
+      <!-- JS injects history cards here -->
+    </div>
+  </aside>
+
+  <!-- History toggle tab (right edge) -->
+  <button class="history-tab" id="history-tab-btn" title="View history">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  </button>
+
+  <!-- ── Page wrapper ────────────────────────────────────────────────── -->
+  <div class="page" id="page">
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1 class="hero__title">
+        Measure the <span class="hero__title--green">Big</span> <span class="hero__title--teal">O</span> of your code.
+      </h1>
+      <p class="hero__sub">
+        Paste any function. Get its time &amp; space complexity, loops, functions, a complexity score —<br>
+        plus an optimized rewrite.
+      </p>
+    </section>
+
+    <!-- ── Editor + Code Review (two-col after analysis) ──────────── -->
+    <div class="workspace" id="workspace">
+
+      <!-- Left: terminal editor -->
+      <div class="editor-col" id="editor-col">
+        <div class="terminal">
+
+          <!-- Terminal chrome -->
+          <div class="terminal__chrome">
+            <span class="terminal__dot terminal__dot--red"></span>
+            <span class="terminal__dot terminal__dot--yellow"></span>
+            <span class="terminal__dot terminal__dot--green"></span>
+            <span class="terminal__tab">input.code</span>
+            <button class="terminal__clear" id="clear-btn">✕ Clear</button>
+          </div>
+
+          <!-- Code textarea -->
+          <textarea
+            id="code-input"
+            class="terminal__textarea"
+            spellcheck="false"
+            placeholder="// Paste your function here…"
+          ></textarea>
+
+          <!-- Editor footer -->
+          <div class="terminal__footer">
+            <div class="terminal__lang-toggle" id="lang-toggle">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              Optimized output in <strong>all 13 languages</strong>
+              <span class="terminal__lang-arrow" id="lang-arrow">▾</span>
+            </div>
+            <span class="terminal__char-count" id="char-count">0 chars</span>
+          </div>
+
+          <!-- Language pills (hidden until toggled) -->
+          <div class="lang-pills" id="lang-pills">
+            <button class="lang-pill lang-pill--active" data-lang="JavaScript">JavaScript</button>
+            <button class="lang-pill" data-lang="TypeScript">TypeScript</button>
+            <button class="lang-pill" data-lang="Python">Python</button>
+            <button class="lang-pill" data-lang="Java">Java</button>
+            <button class="lang-pill" data-lang="C++">C++</button>
+            <button class="lang-pill" data-lang="C">C</button>
+            <button class="lang-pill" data-lang="C#">C#</button>
+            <button class="lang-pill" data-lang="Go">Go</button>
+            <button class="lang-pill" data-lang="Rust">Rust</button>
+            <button class="lang-pill" data-lang="Ruby">Ruby</button>
+            <button class="lang-pill" data-lang="PHP">PHP</button>
+            <button class="lang-pill" data-lang="Kotlin">Kotlin</button>
+            <button class="lang-pill" data-lang="Swift">Swift</button>
+            <button class="lang-pill-meta" id="lang-all">All</button>
+            <button class="lang-pill-meta" id="lang-reset">Reset</button>
+          </div>
+
+          <!-- Analyze button -->
+          <button class="btn-analyze" id="analyze-btn" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span id="btn-text">Analyze Complexity</span>
+            <span class="btn-analyze__spinner" id="btn-spinner" style="display:none"></span>
+          </button>
+
+        </div><!-- /terminal -->
+      </div><!-- /editor-col -->
+
+      <!-- Right: Code Review (injected by JS after analysis) -->
+      <div class="review-col" id="review-col" style="display:none">
+        <!-- JS injects code review here -->
+      </div>
+
+    </div><!-- /workspace -->
+
+    <!-- ── Results sections (injected by JS) ──────────────────────── -->
+    <div class="results-area" id="results-area" style="display:none">
+
+      <!-- Why cards row -->
+      <div class="why-row" id="why-row"></div>
+
+      <!-- Complexity Heatmap -->
+      <div class="section-card" id="heatmap-section"></div>
+
+      <!-- Complexity Meter -->
+      <div class="section-card" id="meter-section"></div>
+
+      <!-- Functions Detected -->
+      <div class="section-card" id="functions-section"></div>
+
+      <!-- Hints -->
+      <div class="section-card" id="hints-section"></div>
+
+      <!-- Optimized Version -->
+      <div class="section-card" id="optimized-section"></div>
+
+      <!-- Before vs After diff -->
+      <div class="section-card" id="diff-section" style="display:none"></div>
+
+      <!-- Pseudocode + Flowchart row -->
+      <div class="bottom-row" id="bottom-row"></div>
+
+    </div><!-- /results-area -->
+
+  </div><!-- /page -->
+
+  <script src="script.js"></script>
+</body>
+</html>
