@@ -16,7 +16,8 @@ app = FastAPI(title="BigO Lab — Code Complexity Analyzer")
 # ── CORS ─────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://code-complexity-analyzer-umber.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
