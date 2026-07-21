@@ -5,7 +5,7 @@
 
 const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? `http://${location.hostname}:${location.port || 8000}`
-  : '';
+  : 'https://code-complexity-analyzer-gm4w.onrender.com';
 const API           = `${API_BASE}/analyze`;
 const TRANSLATE_API = `${API_BASE}/translate`;
 const LANGS = ['JavaScript','TypeScript','Python','Java','C++','C','C#','Go','Rust','Ruby','PHP','Kotlin','Swift'];
